@@ -2,7 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { ListToolsRequestSchema, CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { PrlctlMock } from './prlctl-mock';
-import * as childProcess from 'child_process';
+import { execFile } from 'child_process';
 
 export interface TestHarnessOptions {
   prlctlMock?: PrlctlMock;
@@ -33,8 +33,9 @@ export class MCPTestHarness {
       }
 
 
-      // Mock execFile directly with proper typing
-      MCPTestHarness.mockedExecFile = jest.spyOn(childProcess, 'execFile').mockImplementation(((
+      // Set up execFile mock
+      MCPTestHarness.mockedExecFile = execFile as unknown as jest.Mock;
+      MCPTestHarness.mockedExecFile.mockImplementation(((
         command: any,
         args: any,
         options: any,
@@ -274,6 +275,8 @@ export class MCPTestHarness {
       const { handleManageSshAuth } = await import('../../tools/manageSshAuth.js');
       console.log('[MCPTestHarness] Importing batchOperation...');
       const { handleBatchOperation } = await import('../../tools/batchOperation.js');
+      console.log('[MCPTestHarness] Importing setHostname...');
+      const { handleSetHostname } = await import('../../tools/setHostname.js');
       console.log('[MCPTestHarness] All imports complete');
 
       // Register tool list handler
@@ -434,6 +437,18 @@ export class MCPTestHarness {
             required: ['targetVMs', 'operation'],
           },
         },
+        {
+          name: 'setHostname',
+          description: 'Set the hostname of a VM',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              vmId: { type: 'string', description: 'VM ID or name' },
+              hostname: { type: 'string', description: 'Hostname to set' },
+            },
+            required: ['vmId', 'hostname'],
+          },
+        },
       ];
 
       console.log('[MCPTestHarness] Setting up tool list handler...');
@@ -456,6 +471,7 @@ export class MCPTestHarness {
       toolRouter.registerTool('createTerminalSession', handleCreateTerminalSession);
       toolRouter.registerTool('manageSshAuth', handleManageSshAuth);
       toolRouter.registerTool('batchOperation', handleBatchOperation);
+      toolRouter.registerTool('setHostname', handleSetHostname);
 
       // Register the router with the server (this creates the single CallToolRequestSchema handler)
       toolRouter.registerWithServer(this.server);

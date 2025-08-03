@@ -17,6 +17,7 @@ import { handleTakeScreenshot } from './tools/takeScreenshot.js';
 import { handleCreateTerminalSession } from './tools/createTerminalSession.js';
 import { handleManageSshAuth } from './tools/manageSshAuth.js';
 import { handleBatchOperation } from './tools/batchOperation.js';
+import { handleSetHostname } from './tools/setHostname.js';
 
 // Server metadata
 const SERVER_NAME = 'parallels-desktop-mcp';
@@ -48,7 +49,7 @@ async function main() {
     },
     {
       name: 'createVM',
-      description: 'Create a new VM from scratch or clone from template',
+      description: 'Create a new VM from scratch or clone from template with integrated hostname and user configuration',
       inputSchema: {
         type: 'object',
         properties: {
@@ -63,6 +64,9 @@ async function main() {
           memory: { type: 'number', description: 'Memory in MB (optional)' },
           cpus: { type: 'number', description: 'Number of CPUs (optional)' },
           diskSize: { type: 'number', description: 'Disk size in GB (optional)' },
+          setHostname: { type: 'boolean', description: 'Set hostname inside VM to match VM name (default: true)' },
+          createUser: { type: 'boolean', description: 'Create user matching Mac username with passwordless sudo (default: false)' },
+          enableSshAuth: { type: 'boolean', description: 'Setup SSH authentication for passwordless access (default: false)' },
         },
         required: ['name'],
       },
@@ -169,11 +173,11 @@ async function main() {
         type: 'object',
         properties: {
           vmId: { type: 'string', description: 'VM ID or name' },
-          username: { type: 'string', description: 'Username to configure' },
+          username: { type: 'string', description: 'Username to configure (optional)' },
           publicKeyPath: { type: 'string', description: 'Path to public key (optional)' },
           enablePasswordlessSudo: { type: 'boolean', description: 'Enable passwordless sudo' },
         },
-        required: ['vmId', 'username'],
+        required: ['vmId'],
       },
     },
     {
@@ -197,6 +201,18 @@ async function main() {
         required: ['targetVMs', 'operation'],
       },
     },
+    {
+      name: 'setHostname',
+      description: 'Set the hostname inside a VM to match the VM name or a custom value',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          vmId: { type: 'string', description: 'VM ID or name' },
+          hostname: { type: 'string', description: 'Hostname to set (RFC 1123 compliant)' },
+        },
+        required: ['vmId', 'hostname'],
+      },
+    },
   ];
 
   // Register tools list handler
@@ -218,6 +234,7 @@ async function main() {
   toolRouter.registerTool('createTerminalSession', handleCreateTerminalSession);
   toolRouter.registerTool('manageSshAuth', handleManageSshAuth);
   toolRouter.registerTool('batchOperation', handleBatchOperation);
+  toolRouter.registerTool('setHostname', handleSetHostname);
 
   // Register the router with the server (this creates the single CallToolRequestSchema handler)
   toolRouter.registerWithServer(server);

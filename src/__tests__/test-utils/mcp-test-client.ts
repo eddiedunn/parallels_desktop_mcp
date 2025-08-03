@@ -19,6 +19,7 @@ import { handleTakeScreenshot } from '../../tools/takeScreenshot.js';
 import { handleCreateTerminalSession } from '../../tools/createTerminalSession.js';
 import { handleManageSshAuth } from '../../tools/manageSshAuth.js';
 import { handleBatchOperation } from '../../tools/batchOperation.js';
+import { handleSetHostname } from '../../tools/setHostname.js';
 
 export interface TestClientOptions {
   prlctlMock?: PrlctlMock;
@@ -319,6 +320,18 @@ export class MCPTestClient {
           required: ['targetVMs', 'operation'],
         },
       },
+      {
+        name: 'setHostname',
+        description: 'Set the hostname of a VM',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            vmId: { type: 'string', description: 'VM ID or name' },
+            hostname: { type: 'string', description: 'Hostname to set' },
+          },
+          required: ['vmId', 'hostname'],
+        },
+      },
     ];
 
     // Register tool list handler
@@ -340,6 +353,7 @@ export class MCPTestClient {
     toolRouter.registerTool('createTerminalSession', handleCreateTerminalSession);
     toolRouter.registerTool('manageSshAuth', handleManageSshAuth);
     toolRouter.registerTool('batchOperation', handleBatchOperation);
+    toolRouter.registerTool('setHostname', handleSetHostname);
 
     // Register the router with the server
     toolRouter.registerWithServer(this.server);

@@ -1,0 +1,30 @@
+module.exports = {
+  parser: '@typescript-eslint/parser',
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    project: './tsconfig.json',
+  },
+  rules: {
+    '@typescript-eslint/explicit-function-return-type': 'off',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'prefer-const': 'error',
+    'no-var': 'error',
+    eqeqeq: ['error', 'always'],
+    curly: ['error', 'all'],
+    'no-eval': 'error',
+    'no-implied-eval': 'error',
+    'no-new-func': 'error',
+    'no-return-await': 'error',
+    'require-await': 'error',
+    'no-throw-literal': 'error',
+  },
+  ignorePatterns: ['dist/', 'node_modules/', '*.js'],
+  env: {
+    node: true,
+    jest: true,
+  },
+};

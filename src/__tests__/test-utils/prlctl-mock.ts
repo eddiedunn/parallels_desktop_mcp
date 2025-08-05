@@ -57,6 +57,11 @@ export class PrlctlMock {
       await new Promise((resolve) => setTimeout(resolve, response.delay));
     }
 
+    // Simulate delay if specified
+    if (response.delay) {
+      await new Promise((resolve) => setTimeout(resolve, response.delay));
+    }
+
     if (response.shouldFail) {
       const error: any = new Error(response.error || 'Command failed');
       error.stdout = response.stdout || '';
@@ -253,7 +258,9 @@ export class MockResponseFactory {
    * User management command responses
    */
   static userList(users: Array<{ username: string; uid: number; home: string }>): MockResponse {
-    const lines = users.map((u) => `${u.username}:x:${u.uid}:${u.uid}::/home/${u.username}:/bin/bash`);
+    const lines = users.map(
+      (u) => `${u.username}:x:${u.uid}:${u.uid}::/home/${u.username}:/bin/bash`
+    );
     return { stdout: lines.join('\n') };
   }
 
@@ -281,11 +288,19 @@ export class MockResponseFactory {
     arch?: string;
   }): MockResponse {
     const lines = [];
-    if (info.hostname) lines.push(`Hostname: ${info.hostname}`);
-    if (info.os) lines.push(`Operating System: ${info.os}`);
-    if (info.kernel) lines.push(`Kernel: ${info.kernel}`);
-    if (info.arch) lines.push(`Architecture: ${info.arch}`);
-    
+    if (info.hostname) {
+      lines.push(`Hostname: ${info.hostname}`);
+    }
+    if (info.os) {
+      lines.push(`Operating System: ${info.os}`);
+    }
+    if (info.kernel) {
+      lines.push(`Kernel: ${info.kernel}`);
+    }
+    if (info.arch) {
+      lines.push(`Architecture: ${info.arch}`);
+    }
+
     return { stdout: lines.join('\n') };
   }
 
@@ -331,10 +346,16 @@ export class MockResponseFactory {
     sshEnabled?: boolean;
   }): MockResponse {
     const lines = [`VM '${config.vmId}' configuration complete:`];
-    if (config.hostname) lines.push(`- Hostname set to: ${config.hostname}`);
-    if (config.username) lines.push(`- User created: ${config.username}`);
-    if (config.sshEnabled) lines.push(`- SSH access enabled`);
-    
+    if (config.hostname) {
+      lines.push(`- Hostname set to: ${config.hostname}`);
+    }
+    if (config.username) {
+      lines.push(`- User created: ${config.username}`);
+    }
+    if (config.sshEnabled) {
+      lines.push(`- SSH access enabled`);
+    }
+
     return { stdout: lines.join('\n') };
   }
 
@@ -348,11 +369,19 @@ export class MockResponseFactory {
     dns?: string[];
   }): MockResponse {
     const lines = ['Network configuration applied:'];
-    if (settings.interface) lines.push(`- Interface: ${settings.interface}`);
-    if (settings.ip) lines.push(`- IP Address: ${settings.ip}`);
-    if (settings.gateway) lines.push(`- Gateway: ${settings.gateway}`);
-    if (settings.dns?.length) lines.push(`- DNS: ${settings.dns.join(', ')}`);
-    
+    if (settings.interface) {
+      lines.push(`- Interface: ${settings.interface}`);
+    }
+    if (settings.ip) {
+      lines.push(`- IP Address: ${settings.ip}`);
+    }
+    if (settings.gateway) {
+      lines.push(`- Gateway: ${settings.gateway}`);
+    }
+    if (settings.dns?.length) {
+      lines.push(`- DNS: ${settings.dns.join(', ')}`);
+    }
+
     return { stdout: lines.join('\n') };
   }
 

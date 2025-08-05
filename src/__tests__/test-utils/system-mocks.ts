@@ -1,9 +1,9 @@
 /**
  * System Call Mocking Utilities
- * 
+ *
  * Provides comprehensive mocking for OS-level functions used in
  * Mac username detection and hostname management features.
- * 
+ *
  * Usage:
  * - Call setupOsMocks() in beforeEach() to configure mocks
  * - Use clearOsMocks() in afterEach() to reset mock call history
@@ -151,7 +151,9 @@ export class MockDataGenerators {
   /**
    * Generate user info for different scenarios
    */
-  static generateUserInfo(scenario: 'default' | 'admin' | 'restricted' | 'custom' = 'default'): MockUserInfo {
+  static generateUserInfo(
+    scenario: 'default' | 'admin' | 'restricted' | 'custom' = 'default'
+  ): MockUserInfo {
     const scenarios = {
       default: {
         username: 'johndoe',
@@ -204,7 +206,9 @@ export class MockDataGenerators {
   /**
    * Generate environment variables for different scenarios
    */
-  static generateEnvVars(scenario: 'minimal' | 'standard' | 'development' = 'standard'): Record<string, string> {
+  static generateEnvVars(
+    scenario: 'minimal' | 'standard' | 'development' = 'standard'
+  ): Record<string, string> {
     const base = {
       USER: 'testuser',
       HOME: '/Users/testuser',
@@ -420,7 +424,7 @@ export class SystemMockHelpers {
   ): Promise<T> {
     this.saveEnvironment();
     setupOsMocks(config);
-    
+
     try {
       return await callback();
     } finally {

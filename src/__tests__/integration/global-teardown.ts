@@ -4,8 +4,13 @@
  * Runs once after all test suites complete
  */
 
+import globalVMCleanup from '../global-cleanup';
+
 export default async function globalTeardown() {
   console.log('\n✅ Integration Tests Complete\n');
+
+  // Clean up any orphaned test VMs
+  await globalVMCleanup();
 
   // Clean up test artifacts if not in CI
   if (!process.env.CI) {

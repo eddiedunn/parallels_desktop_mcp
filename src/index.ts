@@ -49,7 +49,8 @@ async function main() {
     },
     {
       name: 'createVM',
-      description: 'Create a new VM from scratch or clone from template with integrated hostname and user configuration',
+      description:
+        'Create a new VM from scratch or clone from template with integrated hostname and user configuration',
       inputSchema: {
         type: 'object',
         properties: {
@@ -64,9 +65,19 @@ async function main() {
           memory: { type: 'number', description: 'Memory in MB (optional)' },
           cpus: { type: 'number', description: 'Number of CPUs (optional)' },
           diskSize: { type: 'number', description: 'Disk size in GB (optional)' },
-          setHostname: { type: 'boolean', description: 'Set hostname inside VM to match VM name (default: true)' },
-          createUser: { type: 'boolean', description: 'Create user matching Mac username with passwordless sudo (default: false)' },
-          enableSshAuth: { type: 'boolean', description: 'Setup SSH authentication for passwordless access (default: false)' },
+          setHostname: {
+            type: 'boolean',
+            description: 'Set hostname inside VM to match VM name (default: true)',
+          },
+          createUser: {
+            type: 'boolean',
+            description:
+              'Create user matching Mac username with passwordless sudo (default: false)',
+          },
+          enableSshAuth: {
+            type: 'boolean',
+            description: 'Setup SSH authentication for passwordless access (default: false)',
+          },
         },
         required: ['name'],
       },

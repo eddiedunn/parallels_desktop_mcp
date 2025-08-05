@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["jest", "node", "@testing-library/jest-dom"]
+  },
+  "include": ["src/**/*", "jest.config.js", "jest.e2e.config.js"],
+  "exclude": ["node_modules", "dist"]
+}

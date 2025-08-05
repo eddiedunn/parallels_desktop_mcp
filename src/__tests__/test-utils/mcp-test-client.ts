@@ -3,7 +3,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ListToolsRequestSchema, CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { PrlctlMock } from './prlctl-mock';
-import * as childProcess from 'child_process';
+import { MockManager } from './mock-manager';
 
 // Import tool router and handlers
 import { ToolRouter } from '../../toolRouter.js';
@@ -34,54 +34,21 @@ export class MCPTestClient {
   private clientTransport!: InMemoryTransport;
   private serverTransport!: InMemoryTransport;
   private prlctlMock?: PrlctlMock;
-  private static mockedExecFile?: jest.SpyInstance;
+  private instanceId: string;
+  private mockManager: MockManager;
+
+  constructor() {
+    this.instanceId = `mcp-client-${Date.now()}-${Math.random()}`;
+    this.mockManager = MockManager.getInstance();
+  }
 
   async start(options: TestClientOptions = {}) {
     this.prlctlMock = options.prlctlMock;
 
     // Mock child_process.execFile if prlctl mock is provided
     if (this.prlctlMock) {
-      // Clean up any existing mock first
-      if (MCPTestClient.mockedExecFile) {
-        MCPTestClient.mockedExecFile.mockRestore();
-        MCPTestClient.mockedExecFile = undefined;
-      }
-
-
-      // Mock execFile directly with proper typing
-      MCPTestClient.mockedExecFile = jest.spyOn(childProcess, 'execFile').mockImplementation(((
-        command: any,
-        args: any,
-        options: any,
-        callback?: any
-      ) => {
-        // Handle both callback and options+callback signatures
-        let actualCallback = callback;
-
-        if (typeof options === 'function') {
-          actualCallback = options;
-        }
-
-        if (command !== 'prlctl' || !args) {
-          actualCallback(new Error(`Command not found: ${command}`));
-          return null as any;
-        }
-
-        // Debug logging
-        console.log('Mocked execFile called:', command, args);
-
-        this.prlctlMock!.execute(args as string[])
-          .then((result) => {
-            console.log('Mock result:', result);
-            actualCallback(null, result.stdout, result.stderr);
-          })
-          .catch((error) => {
-            console.log('Mock error:', error);
-            actualCallback(error);
-          });
-
-        return null as any;
-      }) as any);
+      console.log('[MCPTestClient] Setting up prlctl mock...');
+      this.mockManager.setupExecFileMock(this.instanceId, this.prlctlMock);
     }
 
     // Create bidirectional transports
@@ -125,14 +92,8 @@ export class MCPTestClient {
     await this.client?.close();
     await this.server?.close();
 
-    // Clean up static mock
-    if (MCPTestClient.mockedExecFile) {
-      MCPTestClient.mockedExecFile.mockRestore();
-      MCPTestClient.mockedExecFile = undefined;
-    }
-
-    // Restore all mocks
-    jest.restoreAllMocks();
+    // Clean up mock for this instance
+    this.mockManager.cleanupInstance(this.instanceId);
   }
 
   /**

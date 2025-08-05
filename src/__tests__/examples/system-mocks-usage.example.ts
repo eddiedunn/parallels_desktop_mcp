@@ -1,13 +1,13 @@
 /**
  * Example: Using System Mocks in Tests
- * 
+ *
  * This file demonstrates how to use the system mocking utilities
  * in unit and integration tests.
  */
 
-import * as os from 'os';
-import { 
-  setupOsMocks, 
+// Note: os import removed since it's not used in this example file
+import {
+  setupOsMocks,
   clearOsMocks,
   SystemMockPresets,
   MockDataGenerators,
@@ -92,7 +92,7 @@ describe('VM User Configuration', () => {
 
     // Setup prlctl mocks for VM operations
     const vmId = 'test-vm-123';
-    
+
     // Mock user creation in VM
     prlctlMock.addResponse(
       'exec',
@@ -121,21 +121,24 @@ describe('VM User Configuration', () => {
 
       // Create user in VM
       await prlctlMock.execute(['exec', vmId, 'useradd', '-m', hostUser.username]);
-      
+
       // Set hostname
       await prlctlMock.execute(['exec', vmId, 'hostnamectl', 'set-hostname', hostname]);
-      
+
       // Setup SSH
       await prlctlMock.execute([
-        'exec', vmId, 'bash', '-c',
-        `mkdir -p /home/${hostUser.username}/.ssh && chmod 700 /home/${hostUser.username}/.ssh`
+        'exec',
+        vmId,
+        'bash',
+        '-c',
+        `mkdir -p /home/${hostUser.username}/.ssh && chmod 700 /home/${hostUser.username}/.ssh`,
       ]);
 
       return { username: hostUser.username, hostname };
     };
 
     const result = await configureVMWithHostUser();
-    
+
     expect(result.username).toBe('johndoe');
     expect(result.hostname).toBe('Johns-MacBook-Pro.local');
     expect(prlctlMock.getCallCount('exec')).toBe(3);
@@ -145,7 +148,7 @@ describe('VM User Configuration', () => {
     setupOsMocks({ username: 'existinguser' });
 
     const vmId = 'test-vm-123';
-    
+
     // Mock user already exists error
     prlctlMock.addResponse(
       'exec',
@@ -195,7 +198,7 @@ describe('Scoped System Mocking', () => {
     // Use scoped mock
     const result = await SystemMockHelpers.withMockedSystem(
       { username: 'scopeduser', envVars: { USER: 'scopeduser' } },
-      async () => {
+      () => {
         expect(osMocks.userInfo().username).toBe('scopeduser');
         expect(process.env.USER).toBe('scopeduser');
         return 'completed';
@@ -296,25 +299,41 @@ describe('Complete VM Setup Flow', () => {
 
     prlctlMock.addResponse(
       'exec',
-      [vmId, 'bash', '-c', `echo '${hostInfo.username} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${hostInfo.username}`],
+      [
+        vmId,
+        'bash',
+        '-c',
+        `echo '${hostInfo.username} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${hostInfo.username}`,
+      ],
       MockResponseFactory.sudoersUpdated(hostInfo.username)
     );
 
     // Execute configuration
     const configureVM = async () => {
       // Create user
-      await prlctlMock.execute(['exec', vmId, 'useradd', '-m', '-s', hostInfo.shell, hostInfo.username]);
-      
+      await prlctlMock.execute([
+        'exec',
+        vmId,
+        'useradd',
+        '-m',
+        '-s',
+        hostInfo.shell,
+        hostInfo.username,
+      ]);
+
       // Add to sudo group
       await prlctlMock.execute(['exec', vmId, 'usermod', '-aG', 'sudo', hostInfo.username]);
-      
+
       // Set hostname
       await prlctlMock.execute(['exec', vmId, 'hostnamectl', 'set-hostname', hostname]);
-      
+
       // Configure sudo
       await prlctlMock.execute([
-        'exec', vmId, 'bash', '-c',
-        `echo '${hostInfo.username} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${hostInfo.username}`
+        'exec',
+        vmId,
+        'bash',
+        '-c',
+        `echo '${hostInfo.username} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${hostInfo.username}`,
       ]);
 
       return MockResponseFactory.vmConfigured({
@@ -326,11 +345,20 @@ describe('Complete VM Setup Flow', () => {
     };
 
     const result = await configureVM();
-    
+
     expect(result).toContain('VM configuration complete');
     expect(result).toContain(`Hostname set to: ${hostname}`);
     expect(result).toContain(`User created: ${hostInfo.username}`);
-    expect(prlctlMock.wasCalledWith('exec', [vmId, 'useradd', '-m', '-s', hostInfo.shell, hostInfo.username])).toBe(true);
+    expect(
+      prlctlMock.wasCalledWith('exec', [
+        vmId,
+        'useradd',
+        '-m',
+        '-s',
+        hostInfo.shell,
+        hostInfo.username,
+      ])
+    ).toBe(true);
   });
 });
 

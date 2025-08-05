@@ -43,7 +43,7 @@ export async function executePrlctl(args: string[]): Promise<PrlctlResult> {
         `stdout: ${error.stdout || ''}\n` +
         `stderr: ${error.stderr || ''}`
       : `prlctl command failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    
+
     throw new Error(errorMessage);
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Manual mock for the 'os' module
- * 
+ *
  * This mock is used in tests to override OS-level functions
  */
 

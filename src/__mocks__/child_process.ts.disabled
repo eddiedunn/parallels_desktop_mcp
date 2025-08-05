@@ -1,0 +1,25 @@
+/**
+ * Manual mock for child_process module
+ * 
+ * This file should not be imported directly. Use MockManager instead.
+ */
+
+// Export mock functions that can be controlled by tests
+export const execFile = jest.fn();
+export const exec = jest.fn();
+export const spawn = jest.fn();
+export const fork = jest.fn();
+export const execSync = jest.fn();
+export const execFileSync = jest.fn();
+export const spawnSync = jest.fn();
+
+// Prevent automatic mocking issues
+export default {
+  execFile,
+  exec,
+  spawn,
+  fork,
+  execSync,
+  execFileSync,
+  spawnSync
+};

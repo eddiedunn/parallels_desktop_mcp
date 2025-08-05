@@ -50,6 +50,12 @@ describe('VM Lifecycle Integration Tests (Simplified)', () => {
     it('should create a VM', async () => {
       const vmName = 'test-new-vm';
 
+      // Mock VM existence check (VM doesn't exist)
+      mockExecutePrlctl.mockResolvedValueOnce({
+        stdout: 'UUID                                    STATUS       IP_ADDR         NAME',
+        stderr: '',
+      });
+
       // Mock create command
       mockExecutePrlctl.mockResolvedValueOnce({
         stdout: `Creating virtual machine '${vmName}'...\nThe VM has been successfully created.`,
@@ -75,10 +81,12 @@ describe('VM Lifecycle Integration Tests (Simplified)', () => {
       });
 
       TestUtils.assertSuccess(result);
-      expect(result.content[0].text).toContain('successfully created');
+      expect(result.content[0].text).toContain('✅ **Success**');
+      expect(result.content[0].text).toContain('**VM Created:**');
       expect(result.content[0].text).toContain(vmName);
 
       // Verify the calls
+      expect(mockExecutePrlctl).toHaveBeenCalledWith(['list', '--all']);
       expect(mockExecutePrlctl).toHaveBeenCalledWith(['create', vmName]);
       expect(mockExecutePrlctl).toHaveBeenCalledWith(['set', vmName, '--memsize', '2048']);
       expect(mockExecutePrlctl).toHaveBeenCalledWith(['set', vmName, '--cpus', '2']);

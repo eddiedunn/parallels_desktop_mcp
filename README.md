@@ -6,8 +6,8 @@ A Model Context Protocol (MCP) server for managing Parallels Desktop virtual mac
 
 ✅ **Build Status**: All builds passing  
 ✅ **Security**: No vulnerabilities detected  
-✅ **Code Quality**: All ESLint errors resolved  
-✅ **Test Coverage**: 22.55% (up from 8.3%)
+✅ **Code Quality**: All ESLint errors resolved (134 warnings)  
+⚠️ **Test Coverage**: 80.49% lines (61.9% tests passing)
 
 ## Features
 
@@ -214,12 +214,13 @@ npm run pre-commit
 
 The project includes comprehensive test suites with unit, integration, and end-to-end tests.
 
-### Test Coverage Improvements
+### Test Coverage Status
 
-- **Current Coverage**: 22.55% (significant improvement from 8.3%)
-- **Unit Tests**: Added for key tools (listVMs, startVM, stopVM)
-- **Security Tests**: Command injection prevention fully tested
-- **Integration Tests**: VM lifecycle and tool interaction tests
+- **Current Coverage**: 80.49% line coverage
+- **Test Pass Rate**: 61.9% (135 passing, 83 failing)
+- **Unit Tests**: Comprehensive coverage for all tools
+- **Integration Tests**: Timeout issues affecting pass rate
+- **E2E Tests**: 87.5% pass rate (7/8 passing)
 
 ```bash
 # Run all tests

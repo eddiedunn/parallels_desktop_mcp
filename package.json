@@ -10,7 +10,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:unit": "jest --testPathPattern=unit",
-    "test:integration": "jest --testPathPattern=integration",
+    "test:integration": "jest --config jest.config.integration.js",
     "test:e2e": "jest --config jest.e2e.config.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -20,7 +20,11 @@
     "format": "prettier --write \"src/**/*.ts\" \"*.json\" \"*.js\" \"*.md\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"*.json\" \"*.js\" \"*.md\"",
     "security:check": "npm audit",
-    "pre-commit": "npm run format:check && npm run lint && npm run type-check && npm run test:unit"
+    "pre-commit": "npm run format:check && npm run lint && npm run type-check && npm run test:unit",
+    "cleanup:vms": "ts-node scripts/cleanup-test-vms.ts",
+    "cleanup:vms:dry-run": "ts-node scripts/cleanup-test-vms.ts --dry-run",
+    "cleanup:vms:force": "ts-node scripts/cleanup-test-vms.ts --force",
+    "cleanup:vms:help": "ts-node scripts/cleanup-test-vms.ts --help"
   },
   "repository": {
     "type": "git",

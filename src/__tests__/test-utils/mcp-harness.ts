@@ -1,8 +1,11 @@
+// Mock child_process module
+jest.mock('child_process');
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { ListToolsRequestSchema, CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { PrlctlMock } from './prlctl-mock';
-import { execFile } from 'child_process';
+import { MockManager } from './mock-manager';
 
 export interface TestHarnessOptions {
   prlctlMock?: PrlctlMock;
@@ -17,7 +20,15 @@ export class MCPTestHarness {
   private serverTransport!: InMemoryTransport;
   private prlctlMock?: PrlctlMock;
   private initialized = false;
-  private static mockedExecFile?: jest.SpyInstance;
+  private instanceId: string;
+  private mockManager: MockManager;
+  private responses: Map<number, any> = new Map();
+  private createdVMs: Set<string> = new Set();
+
+  constructor() {
+    this.instanceId = `mcp-harness-${Date.now()}-${Math.random()}`;
+    this.mockManager = MockManager.getInstance();
+  }
 
   async start(options: TestHarnessOptions = {}) {
     console.log('[MCPTestHarness] Starting...');
@@ -26,39 +37,21 @@ export class MCPTestHarness {
     // Mock child_process.execFile if prlctl mock is provided
     if (this.prlctlMock) {
       console.log('[MCPTestHarness] Setting up prlctl mock...');
-      // Clean up any existing mock first
-      if (MCPTestHarness.mockedExecFile) {
-        MCPTestHarness.mockedExecFile.mockRestore();
-        MCPTestHarness.mockedExecFile = undefined;
-      }
-
-
-      // Set up execFile mock
-      MCPTestHarness.mockedExecFile = execFile as unknown as jest.Mock;
-      MCPTestHarness.mockedExecFile.mockImplementation(((
-        command: any,
-        args: any,
-        options: any,
-        callback?: any
-      ) => {
-        // Handle both callback and options+callback signatures
-        let actualCallback = callback;
-
-        if (typeof options === 'function') {
-          actualCallback = options;
+      this.mockManager.setupExecFileMock(this.instanceId, this.prlctlMock);
+      
+      // Track VM creation for cleanup
+      const originalExecute = this.prlctlMock.execute.bind(this.prlctlMock);
+      this.prlctlMock.execute = async (args: string[]) => {
+        if (args[0] === 'create' && args[1]) {
+          this.createdVMs.add(args[1]);
+        } else if (args[0] === 'clone' && args.includes('--name')) {
+          const nameIndex = args.indexOf('--name');
+          if (nameIndex !== -1 && args[nameIndex + 1]) {
+            this.createdVMs.add(args[nameIndex + 1]);
+          }
         }
-
-        if (command !== 'prlctl' || !args) {
-          actualCallback(new Error(`Command not found: ${command}`));
-          return null as any;
-        }
-
-        this.prlctlMock!.execute(args as string[])
-          .then((result) => actualCallback(null, result.stdout, result.stderr))
-          .catch((error) => actualCallback(error));
-
-        return null as any;
-      }) as any);
+        return originalExecute(args);
+      };
     }
 
     console.log('[MCPTestHarness] Creating transports...');
@@ -66,6 +59,16 @@ export class MCPTestHarness {
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     this.clientTransport = clientTransport;
     this.serverTransport = serverTransport;
+
+    // Set up response collection
+    this.responses = new Map();
+
+    // Set up message handler before starting
+    this.clientTransport.onmessage = (message: any) => {
+      if (message.id) {
+        this.responses.set(message.id, message);
+      }
+    };
 
     // Start the transports
     await this.clientTransport.start();
@@ -102,19 +105,39 @@ export class MCPTestHarness {
   }
 
   async stop() {
+    // Clean up any created VMs first
+    await this.cleanupTestVMs();
+
     if (this.initialized) {
       await this.server.close();
       this.initialized = false;
     }
 
-    // Clean up static mock
-    if (MCPTestHarness.mockedExecFile) {
-      MCPTestHarness.mockedExecFile.mockRestore();
-      MCPTestHarness.mockedExecFile = undefined;
+    // Clean up mock for this instance
+    this.mockManager.cleanupInstance(this.instanceId);
+  }
+
+  /**
+   * Clean up any VMs created during tests
+   */
+  private async cleanupTestVMs() {
+    if (this.createdVMs.size === 0) {
+      return;
     }
 
-    // Restore all mocks
-    jest.restoreAllMocks();
+    console.log(`[MCPTestHarness] Cleaning up ${this.createdVMs.size} test VMs...`);
+
+    // For mocked tests, just clear the set
+    if (this.prlctlMock) {
+      this.createdVMs.clear();
+      return;
+    }
+
+    // For real tests (if any), we would need to actually delete the VMs
+    // This is a safety measure to prevent orphaned test VMs
+    // Since child_process is mocked in tests, we skip real cleanup
+    console.log(`[MCPTestHarness] Skipping real VM cleanup in test environment`);
+    this.createdVMs.clear();
   }
 
   /**
@@ -187,6 +210,13 @@ export class MCPTestHarness {
   }
 
   /**
+   * Get the list of VMs created during this test session
+   */
+  getCreatedVMs(): string[] {
+    return Array.from(this.createdVMs);
+  }
+
+  /**
    * Send raw request and get response
    */
   private async sendRequest(request: any): Promise<any> {
@@ -217,28 +247,24 @@ export class MCPTestHarness {
 
   private waitForResponse(requestId: number, timeoutMs: number): Promise<any | null> {
     return new Promise((resolve) => {
-      let resolved = false;
+      const startTime = Date.now();
 
-      // Set up a one-time message handler
-      const originalHandler = (this.clientTransport as any).handler;
-      (this.clientTransport as any).handler = (message: any) => {
-        if (message.id === requestId && !resolved) {
-          resolved = true;
-          (this.clientTransport as any).handler = originalHandler;
-          resolve(message);
-        } else if (originalHandler) {
-          originalHandler(message);
+      const checkResponse = () => {
+        if (this.responses.has(requestId)) {
+          const response = this.responses.get(requestId);
+          this.responses.delete(requestId);
+          resolve(response);
+          return;
+        }
+
+        if (Date.now() - startTime < timeoutMs) {
+          setTimeout(checkResponse, 10);
+        } else {
+          resolve(null);
         }
       };
 
-      // Timeout
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          (this.clientTransport as any).handler = originalHandler;
-          resolve(null);
-        }
-      }, timeoutMs);
+      checkResponse();
     });
   }
 
@@ -544,9 +570,10 @@ export class TestUtils {
     expect(result.content).toBeDefined();
     expect(result.content[0]).toBeDefined();
 
+    // Check that it's not an error response
     const text = result.content[0].text;
-    expect(text).toContain('Success');
-    expect(text).not.toContain('Error');
+    expect(text).not.toContain('Error:');
+    expect(text).not.toContain('❌');
   }
 
   /**

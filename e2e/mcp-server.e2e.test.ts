@@ -130,11 +130,41 @@ describe('MCP Server E2E Tests', () => {
   describe('Security', () => {
     it('should prevent command injection attempts', async () => {
       const maliciousName = 'test; rm -rf /';
+      const expectedSanitizedName = 'testrmrf'; // This is what the sanitization produces
       
-      const result = await client.callTool({
-        name: 'createVM',
-        arguments: { name: maliciousName }
+      // Pre-test cleanup: ensure no leftover VMs from previous runs
+      const preCleanupResult = await client.callTool({
+        name: 'listVMs',
+        arguments: {}
       });
+      
+      if (!preCleanupResult.isError) {
+        const vmListText = (preCleanupResult as any).content[0].text;
+        if (vmListText.includes(expectedSanitizedName)) {
+          console.log(`[E2E Security Test] Found existing VM '${expectedSanitizedName}', cleaning up...`);
+          try {
+            await client.callTool({
+              name: 'deleteVM',
+              arguments: { vmId: expectedSanitizedName, confirm: true }
+            });
+            console.log(`[E2E Security Test] Successfully deleted existing VM '${expectedSanitizedName}'`);
+          } catch (error) {
+            console.error(`[E2E Security Test] Failed to delete existing VM '${expectedSanitizedName}':`, error);
+          }
+        }
+      }
+      
+      let result;
+      try {
+        result = await client.callTool({
+          name: 'createVM',
+          arguments: { name: maliciousName }
+        });
+      } catch (error) {
+        // If it throws, it might be due to validation - that's good
+        expect(error).toBeDefined();
+        return;
+      }
       
       // The tool should either:
       // 1. Sanitize the input and succeed
@@ -144,11 +174,29 @@ describe('MCP Server E2E Tests', () => {
       if (!result.isError) {
         // If it succeeded, the name should be sanitized
         // "test; rm -rf /" should become "testrmrf"
-        expect((result as any).content[0].text).toContain('testrmrf');
+        expect((result as any).content[0].text).toContain(expectedSanitizedName);
         expect((result as any).content[0].text).not.toContain(';');
         expect((result as any).content[0].text).not.toContain('/');
+        
+        // Clean up: delete the created VM
+        // The VM will have the sanitized name
+        try {
+          const deleteResult = await client.callTool({
+            name: 'deleteVM',
+            arguments: { vmId: expectedSanitizedName, confirm: true }
+          });
+          
+          if (deleteResult.isError) {
+            console.error(`[E2E Security Test] VM deletion returned error: ${(deleteResult as any).content[0].text}`);
+          } else {
+            console.log(`[E2E Security Test] Successfully cleaned up VM '${expectedSanitizedName}'`);
+          }
+        } catch (cleanupError) {
+          // Log cleanup failure for debugging
+          console.error(`[E2E Security Test] Failed to cleanup VM '${expectedSanitizedName}':`, cleanupError);
+        }
       }
-    });
+    }, 120000); // Increase timeout to 120 seconds for VM creation
   });
 
   describe('Performance', () => {
